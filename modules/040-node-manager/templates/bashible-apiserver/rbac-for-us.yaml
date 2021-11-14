@@ -9,9 +9,21 @@ metadata:
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: bashible-apiserver-readconfig
+  name: d8:bashible-apiserver-readconfig
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "get", "watch", "list"]
+# RBAC for bashible - access to registry secret
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bashible-apiserver-readregsecret
+  namespace: d8-system
+  {{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -27,7 +39,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: bashible-apiserver-readconfig
+  name: d8:bashible-apiserver-readconfig
 subjects:
   - kind: ServiceAccount
     name: bashible-apiserver
@@ -46,7 +58,7 @@ rules:
     resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
     verbs: ["get", "watch", "list"]
   - apiGroups: ["flowcontrol.apiserver.k8s.io"]
-    resources: ["PriorityLevelConfigurations"]
+    resources: ["prioritylevelconfigurations", "flowschemas"]
     verbs: ["get", "watch", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
