@@ -43,8 +43,6 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.25")
-
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
@@ -147,6 +145,11 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       secretRef:
         name: custom-secret
         namespace: default
+- name: version-1-0
+  spec:
+    controllerVersion: "1.0"
+    ingressClass: version-1-0
+    inlet: "LoadBalancer"
 `)
 			hec.HelmRender()
 		})
@@ -276,6 +279,12 @@ memory: 500Mi`))
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-solid-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "controller-solid-failover").Exists()).To(BeTrue())
+
+			version1DaemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-version-1-0")
+			Expect(version1DaemonSet.Exists()).To(BeTrue())
+
+			Expect(version1DaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`1.0`))
+
 		})
 
 		Context("Vertical pod autoscaler CRD is disabled", func() {

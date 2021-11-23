@@ -2,3 +2,5 @@ properties:
   defaultControllerVersion:
     description: |
       Версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по умолчанию, если небыл задан параметр `controllerVersion` в IngressNginxController CR.
+
+      **Внимание!** Начиная с Kubernetes 1.22 поддерживаются только контроллеры версий `>= 1.0`.

@@ -89,7 +89,7 @@ spec:
           value: "0.0.0.0"
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
+            ignorePaths:
             - /healthz
             - /ready
             upstreams:

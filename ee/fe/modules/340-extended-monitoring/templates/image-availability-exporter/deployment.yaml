@@ -91,7 +91,7 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
+            ignorePaths:
             - /healthz
             - /ready
             upstreams:

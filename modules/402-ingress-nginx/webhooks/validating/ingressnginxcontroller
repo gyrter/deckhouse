@@ -40,6 +40,30 @@ function forbid() {
     ' > $VALIDATING_RESPONSE_PATH
 }
 
+function semver::normalize() {
+  if [ -z "$(echo $1 | cut -d. -f3-)" ] ; then
+    echo "${1}.0"
+  else
+    echo "$1"
+  fi
+}
+
+function semver::gt() {
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
+  if [[ "$ret" == "1" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+function semver::lt() {
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
+  if [[ "$ret" == "-1" ]]; then
+    return 0
+  fi
+  return 1
+}
+
 function __main__() {
   # Inlet on-flight change prohibited
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
@@ -61,6 +85,17 @@ function __main__() {
     if ! kubectl get secret -n ${defaultSSLSecret[0]} ${defaultSSLSecret[1]} >/dev/null 2>&1; then
       forbid ".spec.defaultSSLCertificate field contains reference to non existent Secret \"${defaultSSLSecret[0]}/${defaultSSLSecret[1]}\""
       exit 0
+    fi
+  fi
+
+  # On Kubernetes 1.22 we can only use controller versions >= 1.0
+  kubernetesVersion="$(kubectl version -o json | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
+  if semver::gt "$kubernetesVersion" "1.22"; then
+    if controllerVersion=( $(context::jq -re '.review.request.object.spec.controllerVersion // empty') ); then
+      if semver::lt "$controllerVersion" "1.0"; then
+        forbid ".spec.controllerVersion on Kubernetes 1.22 should be at least \"1.0\", but lower version was specified \"$controllerVersion\""
+        exit 0
+      fi
     fi
   fi
 

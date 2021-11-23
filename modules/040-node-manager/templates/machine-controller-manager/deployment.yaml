@@ -91,6 +91,7 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
           env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:
@@ -98,7 +99,7 @@ spec:
                 fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
-              excludePaths:
+              ignorePaths:
               - /healthz
               upstreams:
               - upstream: http://127.0.0.1:10258/
@@ -115,11 +116,15 @@ spec:
           - containerPort: 8443
             name: https-metrics
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /livez
               port: 8443
+              scheme: HTTPS
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /livez
               port: 8443
+              scheme: HTTPS
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}

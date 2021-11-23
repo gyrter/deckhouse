@@ -58,7 +58,9 @@ spec:
                     One of the supported NGINX Ingress Controller versions.
 
                     **By default**: the version in the module settings is used.
-                  enum: ['0.25', '0.26', '0.33', '0.46', '0.48', '0.49']
+
+                    **Caution!** Starting from Kubernetes 1.22 only controller versions `>= 1.0` are supported.
+                  enum: ['0.25', '0.26', '0.33', '0.46', '0.48', '0.49', '1.0']
                 enableIstioSidecar:
                   type: boolean
                   description: |

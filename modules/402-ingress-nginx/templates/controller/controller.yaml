@@ -6,6 +6,7 @@
 {{- $crdChecksum := toJson $crd | sha256sum }}
 {{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
 
+{{- $controllerVersion := $crd.spec.controllerVersion }}
 {{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
@@ -82,7 +83,7 @@ metadata:
     {{- end }}
   {{- end }}
   annotations:
-    ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
+    ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
@@ -137,7 +138,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: {{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}
+      - image: {{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}
         name: controller
         env:
         - name: POD_NAME
@@ -150,11 +151,11 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
-        {{- if semverCompare "=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        {{- if semverCompare "=0.33" $controllerVersion }}
         - name: SHUTDOWN_GRACE_PERIOD
           value: {{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod | quote }}
         {{- end }}
-  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+  {{- if semverCompare ">=0.33" $controllerVersion }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
           value: "true"
@@ -186,7 +187,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
-        {{- if semverCompare ">=0.46" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        {{- if semverCompare ">=0.46" $controllerVersion }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
         {{- end }}
@@ -202,15 +203,21 @@ spec:
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
-  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+  {{- if semverCompare ">=0.33" $controllerVersion }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
       {{- if $geoIP2.maxmindEditionIDs }}
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
       {{- end }}
     {{- end }}
+    {{- if semverCompare ">=1.0" $controllerVersion }}
+        # Starting from v1.0 we dropped `pod-ip.patch` in favor of the existing argument.
+        - --healthz-host=127.0.0.1
+        # Starting from v1.0 we need explicitly define the ConfigMap name for leader election.
+        - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+    {{- end }}
   {{- end }}
-  {{- if semverCompare ">=0.26" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+  {{- if semverCompare ">=0.26" $controllerVersion }}
         lifecycle:
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
@@ -303,7 +310,7 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
+            ignorePaths:
             - /controller/healthz
             upstreams:
             - upstream: http://127.0.0.1:10254/
