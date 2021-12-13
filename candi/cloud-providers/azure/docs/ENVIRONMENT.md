@@ -2,13 +2,19 @@
 title: "Cloud provider — Azure: Preparing environment"
 ---
 
-You have to create a service account with Microsoft Azure so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the provider's [documentation](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli). Below, we will provide a brief overview of the necessary actions:
-- Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) and perform a `login`;
-- Export the environment variable by substituting the Microsoft Azure subscription ID instead of the `my-subscription-id`;
-  ```shell
-export SUBSCRIPTION_ID="my-subscription-id"
+To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
+
+You have to create a service account with Microsoft Azure so that Deckhouse can manage cloud resources:
+- Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), login and get Subscription ID:
+```shell
+export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
 ```
-- Create a service account:
-  ```shell
-az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "account_name"
+- Create the service account:
+```shell
+az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
+```
+
+For further work with the az tool, you have to be logged in. If you have a service account username, password, and tenant, you're able to use them:
+```shell
+az login --service-principal -u <username> -p <password> --tenant <tenant>
 ```
