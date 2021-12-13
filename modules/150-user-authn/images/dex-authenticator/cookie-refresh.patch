@@ -1,5 +1,5 @@
 diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 3215b25..633f3bc 100644
+index 3215b25..16e7aa4 100644
 --- a/pkg/sessions/persistence/manager.go
 +++ b/pkg/sessions/persistence/manager.go
 @@ -3,6 +3,7 @@ package persistence
@@ -37,7 +37,7 @@ index 3215b25..633f3bc 100644
  		m.Store.Lock,
  	)
 +
-+	if err != nil && strings.HasPrefix(err.Error(), "error loading redis session") {
++	if err != nil && strings.HasPrefix(err.Error(), "failed to load the session state with the ticket") {
 +		// Suppress redis loadig errors, because in this case we have a refresh token in cookie
 +		err = nil
 +	}
@@ -60,7 +60,7 @@ index 3215b25..633f3bc 100644
  		// Always clear the cookie, even when we can't load a cookie from
  		// the request
 diff --git a/pkg/sessions/persistence/ticket.go b/pkg/sessions/persistence/ticket.go
-index 70bb58a..79db9d2 100644
+index 70bb58a..74deaa7 100644
 --- a/pkg/sessions/persistence/ticket.go
 +++ b/pkg/sessions/persistence/ticket.go
 @@ -5,6 +5,7 @@ import (
@@ -136,6 +136,15 @@ index 70bb58a..79db9d2 100644
  	}
 
  	// Valid cookie, decode the ticket
+@@ -130,7 +142,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
+ func (t *ticket) loadSession(loader loadFunc, initLock initLockFunc) (*sessions.SessionState, error) {
+ 	ciphertext, err := loader(t.id)
+ 	if err != nil {
+-		return nil, fmt.Errorf("failed to load the session state with the ticket: %v", err)
++		return nil, fmt.Errorf("failed to load the session state with the ticket: %w", err)
+ 	}
+ 	c, err := t.makeCipher()
+ 	if err != nil {
 @@ -154,9 +166,19 @@ func (t *ticket) clearSession(clearer clearFunc) error {
 
  // setCookie sets the encoded ticket as a cookie
