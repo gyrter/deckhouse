@@ -9,6 +9,7 @@
     labels:
       impact: marginal
       likelihood: certain
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -37,6 +38,7 @@
     labels:
       impact: critical
       likelihood: certain
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -50,6 +52,7 @@
     labels:
       impact: marginal
       likelihood: certain
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       description: |-
@@ -64,6 +67,7 @@
     labels:
       impact: marginal
       likelihood: certain
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -81,6 +85,7 @@
     labels:
       impact: catastrophic
       likelihood: unlikely
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -98,6 +103,7 @@
     labels:
       impact: catastrophic
       likelihood: certain
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
