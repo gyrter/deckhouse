@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const madisonAlertChannelName = "madison"
+const madisonAlertChannelName = "flant-madison"
 
 const alertManagerGrafanaAlertChannelType = "prometheus-alertmanager"
 
@@ -56,13 +56,13 @@ type GrafanaAlertsChannel struct {
 	SecureSettings        map[string]interface{} `json:"secure_settings"`
 }
 
-func getStringFromUnstructured(obj *unstructured.Unstructured, path string) (string, error) {
-	val, ok, err := unstructured.NestedString(obj.Object, path)
+func getStringFromUnstructured(obj *unstructured.Unstructured, path ...string) (string, error) {
+	val, ok, err := unstructured.NestedString(obj.Object, path...)
 	if err != nil {
-		return "", fmt.Errorf("cannot get '%s' from GrafanaNotificationsChannel: %v", path, err)
+		return "", fmt.Errorf("cannot get '%s' from GrafanaAlertsChannel: %v", path, err)
 	}
 	if !ok {
-		return "", fmt.Errorf("has no '%s' field in GrafanaNotificationsChannel", path)
+		return "", fmt.Errorf("has no '%s' field in GrafanaAlertChannel", path)
 	}
 
 	return val, nil
@@ -70,10 +70,10 @@ func getStringFromUnstructured(obj *unstructured.Unstructured, path string) (str
 
 func getChannelSettings(notifierType string, obj *unstructured.Unstructured) (s map[string]interface{}, sec map[string]interface{}, err error) {
 	if notifierType != alertManagerGrafanaAlertChannelType {
-		return nil, nil, fmt.Errorf("unsupported GrafanaNotificationsChannel type %s", notifierType)
+		return nil, nil, fmt.Errorf("unsupported GrafanaAlertsChannel type %s", notifierType)
 	}
 
-	address, err := getStringFromUnstructured(obj, "spec.alertManager.address")
+	address, err := getStringFromUnstructured(obj, "spec", "alertManager", "address")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,11 +84,9 @@ func getChannelSettings(notifierType string, obj *unstructured.Unstructured) (s 
 
 	secureSettings := make(map[string]interface{})
 
-	const authPath = "spec.alertManager.auth.basic"
-
-	auth, ok, err := unstructured.NestedMap(obj.Object, authPath)
+	auth, ok, err := unstructured.NestedMap(obj.Object, "spec", "alertManager", "auth", "basic")
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot get '%s' from GrafanaNotificationsChannel: %v", authPath, err)
+		return nil, nil, fmt.Errorf("cannot get '' from GrafanaAlertsChannel: %v", err)
 	}
 
 	if ok {
@@ -102,17 +100,17 @@ func getChannelSettings(notifierType string, obj *unstructured.Unstructured) (s 
 }
 
 func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	chType, err := getStringFromUnstructured(obj, "spec.type")
+	chType, err := getStringFromUnstructured(obj, "spec", "type")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get spec.type from GrafanaNotificationsChannel: %v", err)
+		return nil, fmt.Errorf("cannot get spec.type from GrafanaAlertsChannel: %v", err)
 	}
 
-	disableResolveMsg, ok, err := unstructured.NestedBool(obj.Object, "spec.disableResolveMessage")
+	disableResolveMsg, ok, err := unstructured.NestedBool(obj.Object, "spec", "disableResolveMessage")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get spec.disableResolveMessage from GrafanaNotificationsChannel: %v", err)
+		return nil, fmt.Errorf("cannot get spec.disableResolveMessage from GrafanaAlertsChannel: %v", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("has no spec.disableResolveMessage field in GrafanaNotificationsChannel")
+		disableResolveMsg = false
 	}
 
 	settings, securitySettings, err := getChannelSettings(chType, obj)
@@ -129,7 +127,6 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 		Settings:              settings,
 		SecureSettings:        securitySettings,
 	}, nil
-
 }
 
 func grafanaAlertsChannelsHandler(input *go_hook.HookInput) error {

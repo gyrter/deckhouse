@@ -27,6 +27,115 @@ import (
 )
 
 var _ = FDescribe("Prometheus hooks :: grafana notification channels ::", func() {
+	const (
+		testAlertsChannelYAML = `
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAlertsChannel
+metadata:
+  name: test
+spec:
+  type: prometheus-alertmanager
+  alertManager:
+    address: "http://test-alert-manager-url"
+    auth:
+      basic:
+        username: user
+        password: password
+`
+		testAlertsChanelUpdatedYAML = `
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAlertsChannel
+metadata:
+  name: test
+spec:
+  type: prometheus-alertmanager
+  alertManager:
+    address: "https://new-test-url"
+    auth:
+      basic:
+        username: user
+        password: new-password
+`
+		testAlertsChannelWithoutAuthYAML = `
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAlertsChannel
+metadata:
+  name: another
+spec:
+  type: prometheus-alertmanager
+  alertManager:
+    address: "https://another-url"
+`
+	)
+
+	var (
+		testAlertsChannel = GrafanaAlertsChannel{
+			OrgID:                 1,
+			Type:                  alertManagerGrafanaAlertChannelType,
+			Name:                  "test",
+			UID:                   "test",
+			IsDefault:             false,
+			DisableResolveMessage: false,
+			SendReminder:          false,
+			Frequency:             time.Duration(0),
+			Settings: map[string]interface{}{
+				"url":           "http://test-alert-manager-url",
+				"basicAuthUser": "user",
+			},
+			SecureSettings: map[string]interface{}{
+				"basicAuthPassword": "password",
+			},
+		}
+
+		testAlertsChanelUpdated = GrafanaAlertsChannel{
+			OrgID:                 1,
+			Type:                  alertManagerGrafanaAlertChannelType,
+			Name:                  "test",
+			UID:                   "test",
+			IsDefault:             false,
+			DisableResolveMessage: false,
+			SendReminder:          false,
+			Frequency:             time.Duration(0),
+			Settings: map[string]interface{}{
+				"url":           "https://new-test-url",
+				"basicAuthUser": "user",
+			},
+			SecureSettings: map[string]interface{}{
+				"basicAuthPassword": "new-password",
+			},
+		}
+
+		madisonAlertsChannel = GrafanaAlertsChannel{
+			OrgID:                 1,
+			Type:                  alertManagerGrafanaAlertChannelType,
+			Name:                  madisonAlertChannelName,
+			UID:                   madisonAlertChannelName,
+			IsDefault:             false,
+			DisableResolveMessage: false,
+			SendReminder:          false,
+			Frequency:             time.Duration(0),
+			Settings: map[string]interface{}{
+				"url": "http://madison-proxy.d8-monitoring.svc.cluster.my:8080",
+			},
+			SecureSettings: make(map[string]interface{}),
+		}
+
+		testAlertsChannelWithoutAuth = GrafanaAlertsChannel{
+			OrgID:                 1,
+			Type:                  alertManagerGrafanaAlertChannelType,
+			Name:                  "another",
+			UID:                   "another",
+			IsDefault:             false,
+			DisableResolveMessage: false,
+			SendReminder:          false,
+			Frequency:             time.Duration(0),
+			Settings: map[string]interface{}{
+				"url": "https://another-url",
+			},
+			SecureSettings: make(map[string]interface{}),
+		}
+	)
+
 	f := HookExecutionConfigInit(`
 {
   "global": {
@@ -43,19 +152,26 @@ var _ = FDescribe("Prometheus hooks :: grafana notification channels ::", func()
 }`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "GrafanaAlertsChannel", false)
 
-	getChannelsFromValues := func(*HookExecutionConfig) []GrafanaAlertsChannel {
+	assertChannelsInValues := func(f *HookExecutionConfig, expectChannels []GrafanaAlertsChannel) {
 		channels := f.ValuesGet("prometheus.internal.grafana.alertsChannels").Array()
 
-		res := make([]GrafanaAlertsChannel, 0)
+		Expect(channels).To(HaveLen(len(expectChannels)))
+
+		nameToChannel := make(map[string]GrafanaAlertsChannel)
+		for _, c := range expectChannels {
+			nameToChannel[c.UID] = c
+		}
 
 		for _, raw := range channels {
 			c := GrafanaAlertsChannel{}
 			err := json.Unmarshal([]byte(raw.Raw), &c)
 			Expect(err).ToNot(HaveOccurred())
-			res = append(res, c)
-		}
 
-		return res
+			expected, ok := nameToChannel[c.UID]
+
+			Expect(ok).To(BeTrue())
+			Expect(expected).To(Equal(c))
+		}
 	}
 
 	Context("Empty cluster", func() {
@@ -67,107 +183,44 @@ var _ = FDescribe("Prometheus hooks :: grafana notification channels ::", func()
 		It("Does not set any channels in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(getChannelsFromValues(f)).To(HaveLen(0))
+			assertChannelsInValues(f, make([]GrafanaAlertsChannel, 0))
 		})
 
 		Context("Add channel", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
----
-apiVersion: deckhouse.io/v1alpha1
-kind: GrafanaAlertsChannel
-metadata:
-  name: test
-spec:
-  type: prometheus-alertmanager
-  alertManager:
-    address: "http://some-alert-manager"
-    auth:
-      basic:
-        username: user
-        password: password
-`, 0))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(testAlertsChannelYAML, 1))
 				f.RunHook()
 			})
 
 			It("Should store channel in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				channels := getChannelsFromValues(f)
 
-				Expect(channels).To(HaveLen(1))
-
-				Expect(channels[0]).To(Equal(GrafanaAlertsChannel{
-					OrgID:                 1,
-					Type:                  alertManagerGrafanaAlertChannelType,
-					Name:                  "test",
-					UID:                   "test",
-					IsDefault:             false,
-					DisableResolveMessage: false,
-					SendReminder:          false,
-					Frequency:             time.Duration(0),
-					Settings: map[string]interface{}{
-						"url":           "http://some-alert-manager",
-						"basicAuthUser": "user",
-					},
-					SecureSettings: map[string]interface{}{
-						"basicAuthPassword": "password",
-					},
-				}))
+				assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel})
 			})
 
 			Context("Deleting channel", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 0))
 					f.RunHook()
 				})
 
 				It("Should delete GrafanaAdditionalDatasource from values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(getChannelsFromValues(f)).To(HaveLen(0))
+
+					assertChannelsInValues(f, make([]GrafanaAlertsChannel, 0))
 				})
 			})
 
 			Context("Updating channel", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
----
-apiVersion: deckhouse.io/v1alpha1
-kind: GrafanaAlertsChannel
-metadata:
-  name: test
-spec:
-  type: prometheus-alertmanager
-  alertManager:
-    address: "https://another-url"
-    auth:
-      basic:
-        username: user
-        password: another-password
-`, 1))
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(testAlertsChanelUpdatedYAML, 1))
 					f.RunHook()
 				})
 
 				It("Should update GrafanaAdditionalDatasource in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					channels := getChannelsFromValues(f)
 
-					Expect(channels[0]).To(Equal(Expect(channels[0]).To(Equal(GrafanaAlertsChannel{
-						OrgID:                 1,
-						Type:                  alertManagerGrafanaAlertChannelType,
-						Name:                  "test",
-						UID:                   "test",
-						IsDefault:             false,
-						DisableResolveMessage: false,
-						SendReminder:          false,
-						Frequency:             time.Duration(0),
-						Settings: map[string]interface{}{
-							"url":           "https://another-url",
-							"basicAuthUser": "user",
-						},
-						SecureSettings: map[string]interface{}{
-							"basicAuthPassword": "another-password",
-						},
-					}))))
+					assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChanelUpdated})
 				})
 			})
 		})
@@ -180,77 +233,47 @@ spec:
 
 			It("Should store madison alerts channel in values with url only", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				channels := getChannelsFromValues(f)
 
-				Expect(channels).To(HaveLen(1))
+				assertChannelsInValues(f, []GrafanaAlertsChannel{madisonAlertsChannel})
+			})
 
-				Expect(channels[0]).To(Equal(GrafanaAlertsChannel{
-					OrgID:                 1,
-					Type:                  alertManagerGrafanaAlertChannelType,
-					Name:                  madisonAlertChannelName,
-					UID:                   madisonAlertChannelName,
-					IsDefault:             false,
-					DisableResolveMessage: false,
-					SendReminder:          false,
-					Frequency:             time.Duration(0),
-					Settings: map[string]interface{}{
-						"url": "http://madison-proxy.d8-monitoring.svc.cluster.my",
-					},
-					SecureSettings: make(map[string]interface{}),
-				}))
+			Context("Disable flant integration module", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+					f.RunHook()
+				})
+
+				It("Should remove madison alerts channel from values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertChannelsInValues(f, make([]GrafanaAlertsChannel, 0))
+				})
 			})
 		})
 	})
 
-	//	Context("Cluster with GrafanaAdditionalDatasource", func() {
-	//		BeforeEach(func() {
-	//			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-	//---
-	//apiVersion: deckhouse.io/v1
-	//kind: GrafanaAdditionalDatasource
-	//metadata:
-	//  name: test
-	//spec:
-	//  url: /abc
-	//  type: test
-	//  access: Proxy
-	//---
-	//apiVersion: deckhouse.io/v1
-	//kind: GrafanaAdditionalDatasource
-	//metadata:
-	//  name: test-next
-	//spec:
-	//  url: /def
-	//  type: test-next
-	//  access: Direct
-	//`, 2))
-	//			f.RunHook()
-	//		})
-	//
-	//		It("Should synchronize the GrafanaAdditionalDatasource to values", func() {
-	//			Expect(f).To(ExecuteSuccessfully())
-	//			Expect(f.ValuesGet("prometheus.internal.grafana.additionalDatasources").String()).To(MatchJSON(`
-	//[{
-	//   "access": "proxy",
-	//   "editable": false,
-	//   "isDefault": false,
-	//   "name": "test",
-	//   "orgId": 1,
-	//   "type": "test",
-	//   "url": "/abc",
-	//   "uuid": "test",
-	//   "version": 1
-	//},{
-	//   "access": "direct",
-	//   "editable": false,
-	//   "isDefault": false,
-	//   "name": "test-next",
-	//   "orgId": 1,
-	//   "type": "test-next",
-	//   "url": "/def",
-	//   "uuid": "test-next",
-	//   "version": 1
-	//}]`))
-	//		})
-	//	})
+	Context("Alerts channels in cluster", func() {
+		BeforeEach(func() {
+			JoinKubeResourcesAndSet(f, testAlertsChannelYAML, testAlertsChannelWithoutAuthYAML)
+			f.RunHook()
+		})
+
+		It("Should store all alerts channel into values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel, testAlertsChannelWithoutAuth})
+		})
+	})
+
+	Context("Flant integration module is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["flant-integration"]`))
+			f.RunHook()
+		})
+
+		It("Should store madison alerts channel in values with url only", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			assertChannelsInValues(f, []GrafanaAlertsChannel{madisonAlertsChannel})
+		})
+	})
 })

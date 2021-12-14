@@ -100,9 +100,9 @@ properties:
                   type: string
                 type:
                   type: string
+                  enum: ["prometheus-alertmanager"]
                 uid:
                   type: string
-                  enum: ["prometheus-alertmanager"]
                 org_id:
                   type: number
                   enum: [1]
