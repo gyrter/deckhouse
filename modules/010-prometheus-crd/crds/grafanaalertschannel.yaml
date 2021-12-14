@@ -40,29 +40,29 @@ spec:
                   required:
                   - address
                   properties:
-                  address:
-                    type: string
-                    x-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
-                    pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
-                    description: 'URL of an external Alertmanager.'
-                  auth:
-                    type: object
-                    description: 'Authorization properties.'
-                    required:
-                    - basic
-                    properties:
-                      basic:
-                        type: object
-                        description: 'Basic authorization properties.'
-                        required:
-                        - username
-                        - password
-                        properties:
-                          username:
-                            type: string
-                          password:
-                            type: string
-                            format: password
+                    address:
+                      type: string
+                      x-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
+                      pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+                      description: 'URL of an external Alertmanager.'
+                    auth:
+                      type: object
+                      description: 'Authorization properties.'
+                      required:
+                      - basic
+                      properties:
+                        basic:
+                          type: object
+                          description: 'Basic authorization properties.'
+                          required:
+                          - username
+                          - password
+                          properties:
+                            username:
+                              type: string
+                            password:
+                              type: string
+                              format: password
       additionalPrinterColumns:
         - jsonPath: .spec.type
           name: Type
