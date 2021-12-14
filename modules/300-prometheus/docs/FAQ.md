@@ -260,10 +260,12 @@ data:
   prometheus.conf.template: |
     server {
       listen 80 default_server;
+      resolver kube-dns.kube-system.svc.cluster.local valid=30s;
+      set $upstream https://prometheus.d8-monitoring.svc.cluster.local:9090/;
       location / {
         proxy_http_version 1.1;
         proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
-        proxy_pass https://prometheus.d8-monitoring:9090/;
+        proxy_pass $upstream;
       }
     }
 ---
