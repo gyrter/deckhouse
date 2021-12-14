@@ -105,21 +105,6 @@ spec:
 			},
 		}
 
-		madisonAlertsChannel = GrafanaAlertsChannel{
-			OrgID:                 1,
-			Type:                  alertManagerGrafanaAlertChannelType,
-			Name:                  madisonAlertChannelName,
-			UID:                   madisonAlertChannelName,
-			IsDefault:             false,
-			DisableResolveMessage: false,
-			SendReminder:          false,
-			Frequency:             time.Duration(0),
-			Settings: map[string]interface{}{
-				"url": "http://madison-proxy.d8-monitoring.svc.cluster.my:8080",
-			},
-			SecureSettings: make(map[string]interface{}),
-		}
-
 		testAlertsChannelWithoutAuth = GrafanaAlertsChannel{
 			OrgID:                 1,
 			Type:                  alertManagerGrafanaAlertChannelType,
@@ -198,54 +183,42 @@ spec:
 				assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel})
 			})
 
-			Context("Deleting channel", func() {
+			Context("Add another channel without auth", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 0))
+					JoinKubeResourcesAndSet(f, testAlertsChannelYAML, testAlertsChannelWithoutAuthYAML)
 					f.RunHook()
 				})
 
-				It("Should delete GrafanaAdditionalDatasource from values", func() {
+				It("Should add new channel in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
-					assertChannelsInValues(f, make([]GrafanaAlertsChannel, 0))
-				})
-			})
-
-			Context("Updating channel", func() {
-				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(testAlertsChanelUpdatedYAML, 1))
-					f.RunHook()
+					assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel, testAlertsChannelWithoutAuth})
 				})
 
-				It("Should update GrafanaAdditionalDatasource in values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				Context("Deleting channel without auth", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(testAlertsChannelYAML, 0))
+						f.RunHook()
+					})
 
-					assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChanelUpdated})
-				})
-			})
-		})
+					It("Should only delete channel without auth", func() {
+						Expect(f).To(ExecuteSuccessfully())
 
-		Context("Enable flant integration module", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", []byte(`["flant-integration"]`))
-				f.RunHook()
-			})
-
-			It("Should store madison alerts channel in values with url only", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				assertChannelsInValues(f, []GrafanaAlertsChannel{madisonAlertsChannel})
-			})
-
-			Context("Disable flant integration module", func() {
-				BeforeEach(func() {
-					f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
-					f.RunHook()
+						assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel})
+					})
 				})
 
-				It("Should remove madison alerts channel from values", func() {
-					Expect(f).To(ExecuteSuccessfully())
-					assertChannelsInValues(f, make([]GrafanaAlertsChannel, 0))
+				Context("Updating test channel", func() {
+					BeforeEach(func() {
+						JoinKubeResourcesAndSet(f, testAlertsChanelUpdatedYAML, testAlertsChannelWithoutAuthYAML)
+						f.RunHook()
+					})
+
+					It("Should only update test channel in values", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChanelUpdated, testAlertsChannelWithoutAuth})
+					})
 				})
 			})
 		})
@@ -261,19 +234,6 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			assertChannelsInValues(f, []GrafanaAlertsChannel{testAlertsChannel, testAlertsChannelWithoutAuth})
-		})
-	})
-
-	Context("Flant integration module is enabled", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`["flant-integration"]`))
-			f.RunHook()
-		})
-
-		It("Should store madison alerts channel in values with url only", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			assertChannelsInValues(f, []GrafanaAlertsChannel{madisonAlertsChannel})
 		})
 	})
 })

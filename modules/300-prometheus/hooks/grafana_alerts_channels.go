@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/module"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -133,26 +131,6 @@ func grafanaAlertsChannelsHandler(input *go_hook.HookInput) error {
 	alertsChannelsRaw := input.Snapshots["grafana_alerts_channels"]
 
 	alertsChannels := make([]*GrafanaAlertsChannel, 0)
-
-	if module.IsEnabled("flant-integration", input) {
-		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
-
-		// todo maybe get port from service? But we get unnecessary subscription to api server
-		// and port will not change in future
-		madisonProxyUrl := fmt.Sprintf("http://madison-proxy.d8-monitoring.svc.%s:8080", clusterDomain)
-
-		alertsChannels = append(alertsChannels, &GrafanaAlertsChannel{
-			OrgID:                 1,
-			Name:                  madisonAlertChannelName,
-			UID:                   madisonAlertChannelName,
-			Type:                  alertManagerGrafanaAlertChannelType,
-			DisableResolveMessage: false,
-			Settings: map[string]interface{}{
-				"url": madisonProxyUrl,
-			},
-			SecureSettings: make(map[string]interface{}),
-		})
-	}
 
 	for _, nchRaw := range alertsChannelsRaw {
 		nch := nchRaw.(*GrafanaAlertsChannel)
