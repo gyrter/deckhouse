@@ -25,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const alertManagerGrafanaAlertChannelType = "prometheus-alertmanager"
+var grafanaAlertChannelTypes = map[string]string{
+	"PrometheusAlertManager": "prometheus-alertmanager",
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/grafana_alerts_channels",
@@ -64,11 +66,7 @@ func getStringFromUnstructured(obj *unstructured.Unstructured, path ...string) (
 	return val, nil
 }
 
-func getChannelSettings(notifierType string, obj *unstructured.Unstructured) (s map[string]interface{}, sec map[string]interface{}, err error) {
-	if notifierType != alertManagerGrafanaAlertChannelType {
-		return nil, nil, fmt.Errorf("unsupported GrafanaAlertsChannel type %s", notifierType)
-	}
-
+func getChannelSettings(obj *unstructured.Unstructured) (s map[string]interface{}, sec map[string]interface{}, err error) {
 	address, err := getStringFromUnstructured(obj, "spec", "alertManager", "address")
 	if err != nil {
 		return nil, nil, err
@@ -82,7 +80,7 @@ func getChannelSettings(notifierType string, obj *unstructured.Unstructured) (s 
 
 	auth, ok, err := unstructured.NestedMap(obj.Object, "spec", "alertManager", "auth", "basic")
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot get '' from GrafanaAlertsChannel: %v", err)
+		return nil, nil, fmt.Errorf("cannot get 'spec.alertManager.auth.basic' from GrafanaAlertsChannel: %v", err)
 	}
 
 	if ok {
@@ -109,7 +107,12 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 		disableResolveMsg = false
 	}
 
-	settings, securitySettings, err := getChannelSettings(chType, obj)
+	grafanaChannelType, ok := grafanaAlertChannelTypes[chType]
+	if !ok {
+		return nil, fmt.Errorf("unsupported GrafanaAlertsChannel type %s", chType)
+	}
+
+	settings, securitySettings, err := getChannelSettings(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +121,7 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 		OrgID:                 1,
 		Name:                  obj.GetName(),
 		UID:                   obj.GetName(),
-		Type:                  chType,
+		Type:                  grafanaChannelType,
 		DisableResolveMessage: disableResolveMsg,
 		Settings:              settings,
 		SecureSettings:        securitySettings,

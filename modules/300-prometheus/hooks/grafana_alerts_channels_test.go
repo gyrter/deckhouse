@@ -26,7 +26,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Prometheus hooks :: grafana notification channels ::", func() {
+var _ = Describe("Prometheus hooks :: grafana notification channels ::", func() {
 	const (
 		testAlertsChannelYAML = `
 apiVersion: deckhouse.io/v1alpha1
@@ -34,7 +34,7 @@ kind: GrafanaAlertsChannel
 metadata:
   name: test
 spec:
-  type: prometheus-alertmanager
+  type: PrometheusAlertManager
   alertManager:
     address: "http://test-alert-manager-url"
     auth:
@@ -48,7 +48,7 @@ kind: GrafanaAlertsChannel
 metadata:
   name: test
 spec:
-  type: prometheus-alertmanager
+  type: PrometheusAlertManager
   alertManager:
     address: "https://new-test-url"
     auth:
@@ -62,7 +62,7 @@ kind: GrafanaAlertsChannel
 metadata:
   name: another
 spec:
-  type: prometheus-alertmanager
+  type: PrometheusAlertManager
   alertManager:
     address: "https://another-url"
 `
@@ -71,7 +71,7 @@ spec:
 	var (
 		testAlertsChannel = GrafanaAlertsChannel{
 			OrgID:                 1,
-			Type:                  alertManagerGrafanaAlertChannelType,
+			Type:                  "prometheus-alertmanager",
 			Name:                  "test",
 			UID:                   "test",
 			IsDefault:             false,
@@ -89,7 +89,7 @@ spec:
 
 		testAlertsChanelUpdated = GrafanaAlertsChannel{
 			OrgID:                 1,
-			Type:                  alertManagerGrafanaAlertChannelType,
+			Type:                  "prometheus-alertmanager",
 			Name:                  "test",
 			UID:                   "test",
 			IsDefault:             false,
@@ -107,7 +107,7 @@ spec:
 
 		testAlertsChannelWithoutAuth = GrafanaAlertsChannel{
 			OrgID:                 1,
-			Type:                  alertManagerGrafanaAlertChannelType,
+			Type:                  "prometheus-alertmanager",
 			Name:                  "another",
 			UID:                   "another",
 			IsDefault:             false,

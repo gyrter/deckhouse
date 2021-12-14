@@ -29,7 +29,7 @@ spec:
               properties:
                 type:
                   type: string
-                  enum: ["prometheus-alertmanager"]
+                  enum: ["PrometheusAlertManager"]
                 disableResolveMessage:
                   type: bool
                   default: false
