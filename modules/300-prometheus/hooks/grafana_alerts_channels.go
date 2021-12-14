@@ -25,8 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const madisonAlertChannelName = "flant-madison"
-
 const alertManagerGrafanaAlertChannelType = "prometheus-alertmanager"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
