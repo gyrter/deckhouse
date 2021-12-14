@@ -20,7 +20,7 @@ _on_selinux_policy_changed() {
 }
 
 mkdir -p /var/lib/bashible/policies
-bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"p
+bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"
 module deckhouse 1.0;
 
 require {
