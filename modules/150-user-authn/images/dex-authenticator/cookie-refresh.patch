@@ -1,5 +1,5 @@
 diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 3215b25..4dd99c8 100644
+index 3215b25..373bd79 100644
 --- a/pkg/sessions/persistence/manager.go
 +++ b/pkg/sessions/persistence/manager.go
 @@ -1,8 +1,10 @@
@@ -33,7 +33,7 @@ index 3215b25..4dd99c8 100644
  	}
 
 -	return tckt.loadSession(
-+	fmt.Printf("ticket: %s, token: %s", tckt.id, refreshToken)
++	fmt.Printf("ticket: %s, token: %s\n", tckt.id, refreshToken)
 +
 +	state, err := tckt.loadSession(
  		func(key string) ([]byte, error) {
@@ -53,7 +53,7 @@ index 3215b25..4dd99c8 100644
 +	}
 +
 +	data, _ := json.Marshal(state)
-+	fmt.Printf("loaded session: %s", string(data))
++	fmt.Printf("loaded session: %s\n", string(data))
 +
 +	state.RefreshToken = refreshToken
 +
@@ -69,7 +69,7 @@ index 3215b25..4dd99c8 100644
  		// Always clear the cookie, even when we can't load a cookie from
  		// the request
 diff --git a/pkg/sessions/persistence/ticket.go b/pkg/sessions/persistence/ticket.go
-index 70bb58a..6a5240c 100644
+index 70bb58a..cd15c17 100644
 --- a/pkg/sessions/persistence/ticket.go
 +++ b/pkg/sessions/persistence/ticket.go
 @@ -5,6 +5,7 @@ import (
@@ -99,7 +99,7 @@ index 70bb58a..6a5240c 100644
 -func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
 -	ticketParts := strings.Split(encTicket, ".")
 +func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, string, error) {
-+	fmt.Printf("load cookie: %s", encTicket)
++	fmt.Printf("load cookie: %s\n", encTicket)
 +
 +	var value cookieRefreshToken
 +
@@ -182,7 +182,7 @@ index 70bb58a..6a5240c 100644
  		return err
  	}
 
-+	fmt.Printf("set cookie: %s", string(data))
++	fmt.Printf("set cookie: %s\n", string(data))
  	http.SetCookie(rw, ticketCookie)
  	return nil
  }
