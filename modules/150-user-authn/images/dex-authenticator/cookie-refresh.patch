@@ -1,5 +1,5 @@
 diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 3215b25..16e7aa4 100644
+index 3215b25..2b2d6da 100644
 --- a/pkg/sessions/persistence/manager.go
 +++ b/pkg/sessions/persistence/manager.go
 @@ -3,6 +3,7 @@ package persistence
@@ -43,8 +43,8 @@ index 3215b25..16e7aa4 100644
 +	}
 +
 +	if state == nil {
-+		state = &sessions.SessionState{}
-+		state.CreatedAtNow()
++		createdAt, _ := time.Parse(time.RFC3339, "1992-09-30T00:00:00Z")
++		state = &sessions.SessionState{CreatedAt: &createdAt}
 +	}
 +
 +	state.RefreshToken = refreshToken
