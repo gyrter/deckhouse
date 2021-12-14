@@ -20,13 +20,15 @@ _on_selinux_policy_changed() {
 }
 
 mkdir -p /var/lib/bashible/policies
-bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"
+bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"p
 module deckhouse 1.0;
 
 require {
 	type unlabeled_t;
 	type httpd_t;
 	type sge_port_t;
+	type unreserved_port_t;
+	class tcp_socket name_connect;
 	class capability sys_resource;
 	class process setrlimit;
 	class file { getattr open read };
@@ -42,6 +44,7 @@ allow httpd_t self:capability sys_resource;
 #!!!! This avc can be allowed using the boolean 'httpd_setrlimit'
 allow httpd_t self:process setrlimit;
 allow httpd_t sge_port_t:tcp_socket name_bind;
+allow httpd_t unreserved_port_t:tcp_socket name_connect;
 allow httpd_t unlabeled_t:file getattr;
 
 #!!!! This avc is allowed in the current policy
