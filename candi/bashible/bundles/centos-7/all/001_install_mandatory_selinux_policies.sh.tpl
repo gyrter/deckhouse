@@ -24,12 +24,13 @@ bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"
 module deckhouse 1.0;
 
 require {
+	type unlabeled_t;
 	type httpd_t;
 	type sge_port_t;
-	type unreserved_port_t;
 	class capability sys_resource;
 	class process setrlimit;
-	class tcp_socket { name_bind name_connect };
+	class file { getattr open read };
+	class tcp_socket name_bind;
 }
 
 #============= httpd_t ==============
@@ -41,8 +42,8 @@ allow httpd_t self:capability sys_resource;
 #!!!! This avc can be allowed using the boolean 'httpd_setrlimit'
 allow httpd_t self:process setrlimit;
 allow httpd_t sge_port_t:tcp_socket name_bind;
+allow httpd_t unlabeled_t:file getattr;
 
-#!!!! This avc can be allowed using one of the these booleans:
-#     httpd_can_network_connect, nis_enabled
-allow httpd_t unreserved_port_t:tcp_socket name_connect;
+#!!!! This avc is allowed in the current policy
+allow httpd_t unlabeled_t:file { open read };
 EOF
